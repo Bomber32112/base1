@@ -17,58 +17,61 @@ namespace Parapa
             //    }
             Console.WriteLine();
             Employees employees = new Employees();
-            Job[] job = new Job[  2];
+            Job job = new Job();
             employees.jobs = job;
-            
+            Customer customer = new Customer();
+            Table table = new Table();
+            Address address = new Address();
+            var program = new Program();
+            //var method = program.GetType().GetMethod(Console.ReadLine());
+            //method.Invoke(program, null);
+            job.Name = "dsa";
+            Console.WriteLine(employees.jobs.Name);
+            Job[] jobs = new Job[2];
+            employees.name = "sda";
+            employees.surname = employees.name;
+            employees.patronymic = employees.name;
         }
-
+        static void StartBuild() 
+        {
+            Console.WriteLine("Список комманд - help");
+        }
+        static void Help() 
+        {
+            Console.WriteLine("");
+        }
 
 
     }        
-        class Job
-        {
-            public string? Name { get; set; }
-        }
-        struct Employees
-        {
-            public Job[] jobs;
-            public string name;
-            public string surname;
-            public string patronymic;
-            public int passport;
-            public long phoneNumber; 
-
-            public Employees(string n, string s, string pat, int pass, int phone) // j - job, n - name, s - surname, pat - patronymic, 
-            {
-                this.name = n; this.surname = s;
-                this.patronymic = pat; this.passport = pass; 
-                this.phoneNumber = phone;
-            }
-        }
-        struct Customer
-        {
-            public string name;
-            public string surname;
-            public TimeOnly reservationTime;
-            public long phoneNumber;
-            public Customer(string n, string s, long phone, TimeOnly res)
-            {
-                this.name = n; this.surname = s; this.phoneNumber = phone;
-                this.reservationTime = res;
-            }
-        }
-        struct Table 
-        {
-            public int number; public TimeOnly c;
-            public Table(int number, TimeOnly c) 
-            {
-                this.number = number; this.c = c;
-            }
-        }
-        struct Address
-        {
-            public string name;
-            public int number;
-            public Address(string name, int number) { this.name = name; this.number = number; }
-        }
+     class Job
+     {
+        public int indexOfJob { get; set; }
+        public string? Name { get; set; }
+     }
+     class Employees
+     {
+         public Job jobs { get; set; }
+         public string name { get; set; }
+         public string surname { get; set; }
+         public string patronymic { get; set; }
+         public int passport { get; set; }
+         public long phoneNumber { get; set; }
+     }
+     class Customer
+     {
+         public string name { get; set; }
+         public string surname { get; set; }
+         public TimeOnly reservationTime { get; set; }
+         public long phoneNumber { get; set; }
+     }
+     class Table 
+     {
+         public int number { get; set; }
+         public TimeOnly reservationTime { get; set; }
+     }
+     class Address
+     {
+        public string street { get; set; }
+        public int number { get; set; }
+    }
 }
