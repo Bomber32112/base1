@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Interop;
+using System.Reflection;
 using System.Threading.Tasks.Dataflow;
 
 namespace Parapa
@@ -29,8 +30,18 @@ namespace Parapa
             Console.WriteLine(employees.jobs.Name);
             Job[] jobs = new Job[2];
             employees.name = "sda";
-            employees.surname = employees.name;
-            employees.patronymic = employees.name;
+            employees.surname = "asd";
+            employees.patronymic = "dsa";
+            for (int i = 0; i < 2; i++)
+            {
+                jobs[i] = new Job();
+                jobs[i].Name = "job";
+            }
+            employees.jobs = jobs[0];
+            Console.WriteLine(employees.jobs.Name);
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            Console.WriteLine(assembly.GetManifestResourceStream("Program"));
+            
         }
         static void StartBuild() 
         {
