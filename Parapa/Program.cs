@@ -2,12 +2,14 @@
 using System.Drawing;
 using System.Drawing.Interop;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks.Dataflow;
 
 namespace Parapa
 {
     internal class Program
     {
+        /*
         static void Main(string[] args)
         {
             //Graphics graphics = Graphics.FromHwnd(Process.GetCurrentProcess().MainWindowHandle);
@@ -43,6 +45,7 @@ namespace Parapa
             Console.WriteLine(assembly.GetManifestResourceStream("Program"));
             
         }
+        */
         static void StartBuild() 
         {
             Console.WriteLine("Список комманд - help");
@@ -85,4 +88,93 @@ namespace Parapa
         public string street { get; set; }
         public int number { get; set; }
     }
+}
+namespace Testing
+{
+    public class Student 
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Patronimic { get; set; }
+        public DateTime Birth { get; set; }
+        public Group Group { get; set; }
+    }
+
+    public class Group
+    {
+        public int Number { get; set; }
+        public Special Special { get; set; }
+    }
+
+    public class Special
+    {
+        public string Title { get; set; }
+    }
+    public static class Model 
+    {
+        public static Special Spec(string title) 
+        { 
+            Special special = new Special();
+            special.Title = title;
+            return special; 
+        }
+        public static Group Group(int number, Special special) 
+        {
+            Group group = new Group();
+            group.Number = number;
+            group.Special = special;
+            return group;
+        }
+        public static Student Student(string FirstName, string LastName, string Patronimic, DateTime Birth, Group Group) 
+        {
+            Student student = new Student();
+            student.FirstName = FirstName;
+            student.LastName = LastName;
+            student.Patronimic = Patronimic;
+            student.Birth = Birth;
+            student.Group = Group;
+            return student;
+        }
+        public static void Main(string[] args) 
+        {
+            var t = Assembly.GetExecutingAssembly().GetType("Testing.Student");
+            var student = (Student)Activator.CreateInstance(t);
+            var pInfo = t.GetProperty("FirstName");
+            pInfo.SetValue(student, "new name");
+            var str = pInfo.GetValue(student).ToString();
+            Console.WriteLine(str);
+            int.TryParse(Console.ReadLine(), out int number);
+            Student[] students = new Student[number];
+            for (int i = 0; i < students.Length; i++) 
+            {
+                Console.WriteLine("Введите имя студента ");
+                string FirstName = Console.ReadLine();
+                Console.WriteLine("Введите фамилию студента ");
+                string LastName = Console.ReadLine();
+                Console.WriteLine("Введите отчество студента ");
+                string Patronimic = Console.ReadLine();
+                Console.WriteLine("Введите дату рождения студента ");
+                DateTime.TryParse(Console.ReadLine(), out DateTime date);
+                Console.WriteLine("Введите номер группы студента ");
+                int.TryParse(Console.ReadLine(), out int groupNum);
+                Console.WriteLine("Введите название специальности, на которой учится студент ");
+                students[i] = Student(FirstName, LastName, Patronimic, date, Group(number, Spec(Console.ReadLine())));
+
+            }
+            Student student1 = Student("Гордон", "Фримен", "Фрименович", DateTime.Now, Group(123, Spec("Атомная инжинерия")));
+            Student student2 = Student("Гордон", "Фримен", "Фрименович", DateTime.Now, Group(123, Spec("Атомная инжинерия")));
+
+
+        }
+    }
+        public enum Commands 
+        {
+            FirstName,
+            LastName,
+            Patronimic,
+            Birth,
+            GroupNum,
+            SpecTitle
+
+        }
 }
