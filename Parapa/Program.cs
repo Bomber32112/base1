@@ -1,9 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Interop;
+using System.Net.Sockets;
+using System.Net;
 using System.Reflection;
 using System.Reflection.Metadata.Ecma335;
+using System.Text;
 using System.Threading.Tasks.Dataflow;
+using System.ComponentModel.Design;
 
 namespace Parapa
 {
@@ -135,6 +139,7 @@ namespace Testing
             student.Group = Group;
             return student;
         }
+            /*
         public static void Main(string[] args) 
         {
             var t = Assembly.GetExecutingAssembly().GetType("Testing.Student");
@@ -164,8 +169,8 @@ namespace Testing
             Student student1 = Student("Гордон", "Фримен", "Фрименович", DateTime.Now, Group(123, Spec("Атомная инжинерия")));
             Student student2 = Student("Гордон", "Фримен", "Фрименович", DateTime.Now, Group(123, Spec("Атомная инжинерия")));
 
-
         }
+            */
     }
         public enum Commands 
         {
@@ -178,3 +183,121 @@ namespace Testing
 
         }
 }
+namespace SimpleGame
+{
+    internal class Character
+    {
+        public void Info()
+        {
+            Console.WriteLine();
+        }
+        internal string Name { get; set; }
+        internal byte MaxHP { get; set; }
+        internal byte CurrentHP { get; set; }
+        internal byte HealPower { get; set; }
+        internal byte DamagePower { get; set; }
+    }
+    internal class Game
+    {
+        public static void Main(string[] args)
+        {
+            start:
+            Console.WriteLine("Cli or Serv");
+            string input = Console.ReadLine();
+            if (input == "Serv")
+            {
+                Thread thread = new Thread(UDP_server);
+                thread.Start();
+            }
+            else if (input == "Cli")
+            {
+                Thread thread1 = new Thread(UDP_client);
+                thread1.Start();
+            }
+            else
+            {
+                Console.WriteLine("Invalid");
+                goto start;
+            }
+        }
+        public Character CreatePlayesrs() 
+        {
+            Random random = new Random();
+            Game game = new Game();
+            Console.WriteLine("Введите ник игрока: ");
+            game.FirstPlayer.Name = Console.ReadLine();
+            game.FirstPlayer.CurrentHP = game.FirstPlayer.CurrentHP;
+            game.FirstPlayer.DamagePower = (byte)random.Next(3, 6);
+            game.FirstPlayer.HealPower = (byte)random.Next(1, 4);
+            return game.FirstPlayer;
+        }
+        internal Character FirstPlayer { get; set; }
+        internal Character SecondPlayer { get; set; }
+
+
+
+
+
+
+
+
+        static void UDP_server()
+        {
+            int port = 1234;
+            Socket serv = new Socket(SocketType.Dgram, ProtocolType.Udp);
+            EndPoint EndPoint = new IPEndPoint(IPAddress.Any, port);
+            serv.Bind(EndPoint);
+            byte[] clientData = new byte[1000];
+            byte[] data = new byte[1000];
+            byte[] lol = new byte[1000];
+
+            List<(string Ip, int port)> ls = new List<(string Ip, int port)>(2);
+            while (true) 
+            {
+            serv.ReceiveFrom(lol, ref EndPoint);
+            IPEndPoint IPINFO = (IPEndPoint)EndPoint;
+                for (int i = 0; i < ls.Count; i++)
+                    if (ls[i].Ip == IPINFO.Address.ToString() && ls[i].port == IPINFO.Port) { goto end; }
+                ls.Add((IPINFO.Address.ToString(), IPINFO.Port));
+                end:;
+
+                if (ls.Count == 2) break;
+            }
+            while (true)
+            {
+                if (serv.ReceiveFrom(data,ref EndPoint) > 0) {
+                    clientData = Encoding.UTF8.GetBytes("52");
+                    IPEndPoint IPINFO = (IPEndPoint)EndPoint;
+                    serv.SendTo(clientData, IPINFO);
+                    Console.WriteLine($"by comp 3: {Encoding.UTF32.GetString(data)} info= {IPINFO.Address} {IPINFO.Port}"); 
+                    Array.Fill<byte>(data, 0); 
+                }
+            }
+
+        }
+
+        static void UDP_client()
+        {
+            int port = 1234;
+            IPAddress IP = IPAddress.Parse("192.168.201.31");
+            Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //s.Connect(IP, port);
+            EndPoint EndPoint = new IPEndPoint(IP, port);
+            byte[] data;
+            byte[] servData = new byte[1000];
+            while (true)
+            {
+                
+                data = Encoding.UTF8.GetBytes(Console.ReadLine());
+                s.SendTo(data, EndPoint);
+                if (s.Available != 0)
+                {
+                    s.ReceiveFrom(servData, ref EndPoint);
+                    Console.WriteLine(Encoding.UTF8.GetString(servData));
+                }
+            }
+
+        }
+    }
+}
+
