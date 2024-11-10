@@ -8,6 +8,8 @@ using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
 using System.ComponentModel.Design;
+using System.Text.Json.Nodes;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Parapa
 {
@@ -189,7 +191,7 @@ namespace SimpleGame
     {
         public void Info()
         {
-            Console.WriteLine();
+            Console.WriteLine($"Имя: {Name}\n Текущее здоровье:{CurrentHP}\n Текущая сила лечения:{HealPower}\n Текущая сила урона:{DamagePower}");
         }
         internal string Name { get; set; }
         internal byte MaxHP { get; set; }
@@ -220,16 +222,25 @@ namespace SimpleGame
                 goto start;
             }
         }
-        public Character CreatePlayesrs() 
+        public byte[] CreatePlayesrs() 
         {
             Random random = new Random();
             Game game = new Game();
-            Console.WriteLine("Введите ник игрока: ");
+            backToNick:
+            Console.WriteLine("Введите ник игрока не больше 16-ти символов: ");
             game.FirstPlayer.Name = Console.ReadLine();
-            game.FirstPlayer.CurrentHP = game.FirstPlayer.CurrentHP;
+            if (game.FirstPlayer.Name.Length > 16) goto backToNick;
+            game.FirstPlayer.CurrentHP = game.FirstPlayer.MaxHP = 20;
             game.FirstPlayer.DamagePower = (byte)random.Next(3, 6);
             game.FirstPlayer.HealPower = (byte)random.Next(1, 4);
-            return game.FirstPlayer;
+            byte[] newPlayer;
+            newPlayer = Encoding.UTF8.GetBytes(game.FirstPlayer.Name);
+            byte size = (byte)newPlayer.Length;
+            Array.Resize(ref newPlayer, size+3);
+            newPlayer[size] = game.FirstPlayer.CurrentHP;
+            newPlayer[size+1] = game.FirstPlayer.DamagePower;
+            newPlayer[size+2] = game.FirstPlayer.HealPower;
+            return newPlayer;
         }
         internal Character FirstPlayer { get; set; }
         internal Character SecondPlayer { get; set; }
@@ -245,31 +256,66 @@ namespace SimpleGame
         {
             int port = 1234;
             Socket serv = new Socket(SocketType.Dgram, ProtocolType.Udp);
-            EndPoint EndPoint = new IPEndPoint(IPAddress.Any, port);
-            serv.Bind(EndPoint);
-            byte[] clientData = new byte[1000];
+            EndPoint EndPoint1 = new IPEndPoint(IPAddress.Any, port);
+            serv.Bind(EndPoint1);
+            byte[] dataForClient = new byte[1000];
             byte[] data = new byte[1000];
-            byte[] lol = new byte[1000];
+            byte[] player1Data = new byte[19];
+            byte[] player2Data = new byte[19];
 
-            List<(string Ip, int port)> ls = new List<(string Ip, int port)>(2);
-            while (true) 
+            List<(IPAddress Ip, int port)> ls = new List<(IPAddress Ip, int port)>(2);
+            List<IPEndPoint> ends = new List<IPEndPoint>();
+            while (ends.Count < 2) 
             {
-            serv.ReceiveFrom(lol, ref EndPoint);
-            IPEndPoint IPINFO = (IPEndPoint)EndPoint;
+                serv.ReceiveFrom(player1Data, ref EndPoint1);
+                if (ends.FirstOrDefault(s => s.Port == ((IPEndPoint)EndPoint1).Port) == null)
+                {
+                    IPEndPoint IPINFO = (IPEndPoint)EndPoint1;
+                    ends.Add(IPINFO);
+                }
+                /*
                 for (int i = 0; i < ls.Count; i++)
-                    if (ls[i].Ip == IPINFO.Address.ToString() && ls[i].port == IPINFO.Port) { goto end; }
-                ls.Add((IPINFO.Address.ToString(), IPINFO.Port));
+                    if (ls[i].Ip == IPINFO.Address && ls[i].port == IPINFO.Port) { goto end; }
+                ls.Add((IPINFO.Address, IPINFO.Port));
                 end:;
 
-                if (ls.Count == 2) break;
+                if (ls.Count == 2) break;*/
             }
+            /*
+            EndPoint1 = new IPEndPoint(ls[0].Ip, ls[0].port);
+            EndPoint EndPoint2 = new IPEndPoint(ls[1].Ip, ls[1].port);
+            */
+            //
+            //EndPoint EndPoint3 = new IPEndPoint(IPAddress.Any, port);
+            //while (((IPEndPoint)EndPoint3).Address.Address != EndPoint1IP.Address.Address)
+            //{
+            //    serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока"), EndPoint2IP);
+            //    serv.ReceiveFrom(player1Data, ref EndPoint1);
+            //}
+            //serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока закончено"), EndPoint2IP);
+            //while (((IPEndPoint)EndPoint3).Address.Address != EndPoint2IP.Address.Address)
+            //{
+            //    serv.SendTo(Encoding.UTF8.GetBytes("Ожидание второго игрока"), EndPoint1IP);
+            //    serv.ReceiveFrom(player1Data, ref EndPoint1);
+            //}
+            //serv.SendTo($"Ожидание второго игрока закончено", EndPoint1IP);
+            IPEndPoint EndPoint1IP = ends[0];
+            IPEndPoint EndPoint2IP = ends[1];
+            serv.SendTo(Encoding.UTF8.GetBytes("Ожидание данных от первого игрока"), EndPoint1IP);
+            serv.ReceiveFrom(player1Data, ref EndPoint1);
+            serv.SendTo(Encoding.UTF8.GetBytes("Ожидание данных от второго игрока"), EndPoint2IP);
+            serv.ReceiveFrom(player2Data, ref EndPoint1);
+
+
+            Console.WriteLine("все игроки в сборе");
             while (true)
             {
-                if (serv.ReceiveFrom(data,ref EndPoint) > 0) {
-                    clientData = Encoding.UTF8.GetBytes("52");
-                    IPEndPoint IPINFO = (IPEndPoint)EndPoint;
-                    serv.SendTo(clientData, IPINFO);
-                    Console.WriteLine($"by comp 3: {Encoding.UTF32.GetString(data)} info= {IPINFO.Address} {IPINFO.Port}"); 
+                GC.Collect();
+                if (serv.ReceiveFrom(data,ref EndPoint1) > 0) {
+                    dataForClient = Encoding.UTF8.GetBytes("52");
+                    IPEndPoint IPINFO = (IPEndPoint)EndPoint1;
+                    serv.SendTo(dataForClient, IPINFO);
+                    Console.WriteLine($"by comp 3: {Encoding.UTF8.GetString(data)} info= {IPINFO.Address} {IPINFO.Port}"); 
                     Array.Fill<byte>(data, 0); 
                 }
             }
@@ -279,7 +325,8 @@ namespace SimpleGame
         static void UDP_client()
         {
             int port = 1234;
-            IPAddress IP = IPAddress.Parse("192.168.201.31");
+            Console.WriteLine("Введите IP-адресс");
+            IPAddress IP = IPAddress.Parse($"{Console.ReadLine()}");
             Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //s.Connect(IP, port);
             EndPoint EndPoint = new IPEndPoint(IP, port);
