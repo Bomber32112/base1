@@ -257,6 +257,7 @@ namespace SimpleGame
             int port = 1234;
             Socket serv = new Socket(SocketType.Dgram, ProtocolType.Udp);
             EndPoint EndPoint1 = new IPEndPoint(IPAddress.Any, port);
+            EndPoint EndPoint2 = new IPEndPoint(IPAddress.Any, port);
             serv.Bind(EndPoint1);
             byte[] dataForClient = new byte[1000];
             byte[] data = new byte[1000];
@@ -264,53 +265,43 @@ namespace SimpleGame
             byte[] player2Data = new byte[19];
 
             List<(IPAddress Ip, int port)> ls = new List<(IPAddress Ip, int port)>(2);
-            List<IPEndPoint> ends = new List<IPEndPoint>();
-            while (ends.Count < 2) 
+
+            while(true) 
             {
-                serv.ReceiveFrom(player1Data, ref EndPoint1);
-                if (ends.FirstOrDefault(s => s.Port == ((IPEndPoint)EndPoint1).Port) == null)
-                {
-                    IPEndPoint IPINFO = (IPEndPoint)EndPoint1;
-                    ends.Add(IPINFO);
-                }
-                /*
+                EndPoint IP = new IPEndPoint(IPAddress.Any, port);
+                serv.ReceiveFrom(player1Data, ref IP);
+                IPEndPoint IPINFO = (IPEndPoint)IP;
+
+
                 for (int i = 0; i < ls.Count; i++)
-                    if (ls[i].Ip == IPINFO.Address && ls[i].port == IPINFO.Port) { goto end; }
+                    if (ls[i].Ip.Equals(IPINFO.Address) && ls[i].port == IPINFO.Port) { goto end; }
                 ls.Add((IPINFO.Address, IPINFO.Port));
-                end:;
-
-                if (ls.Count == 2) break;*/
+            end:;
+                ls.ForEach(x => Console.WriteLine(x.ToString()));
+                if (ls.Count == 2) break;
             }
-            /*
+
             EndPoint1 = new IPEndPoint(ls[0].Ip, ls[0].port);
-            EndPoint EndPoint2 = new IPEndPoint(ls[1].Ip, ls[1].port);
-            */
-            //
-            //EndPoint EndPoint3 = new IPEndPoint(IPAddress.Any, port);
-            //while (((IPEndPoint)EndPoint3).Address.Address != EndPoint1IP.Address.Address)
-            //{
-            //    serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока"), EndPoint2IP);
-            //    serv.ReceiveFrom(player1Data, ref EndPoint1);
-            //}
-            //serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока закончено"), EndPoint2IP);
-            //while (((IPEndPoint)EndPoint3).Address.Address != EndPoint2IP.Address.Address)
-            //{
-            //    serv.SendTo(Encoding.UTF8.GetBytes("Ожидание второго игрока"), EndPoint1IP);
-            //    serv.ReceiveFrom(player1Data, ref EndPoint1);
-            //}
-            //serv.SendTo($"Ожидание второго игрока закончено", EndPoint1IP);
-            IPEndPoint EndPoint1IP = ends[0];
-            IPEndPoint EndPoint2IP = ends[1];
-            serv.SendTo(Encoding.UTF8.GetBytes("Ожидание данных от первого игрока"), EndPoint1IP);
-            serv.ReceiveFrom(player1Data, ref EndPoint1);
-            serv.SendTo(Encoding.UTF8.GetBytes("Ожидание данных от второго игрока"), EndPoint2IP);
-            serv.ReceiveFrom(player2Data, ref EndPoint1);
-
-
-            Console.WriteLine("все игроки в сборе");
+            EndPoint2 = new IPEndPoint(ls[1].Ip, ls[1].port);
+           
+            Console.WriteLine($"{((IPEndPoint)EndPoint2)} { new IPEndPoint(ls[0].Ip, ls[0].port).ToString()}");
+            bool forThread = false;
+            Thread tread = new Thread(x=>{ while (true) { serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока"), EndPoint2); Thread.Sleep(1500); if (forThread) break; }});
+            tread.Start();
             while (true)
             {
-                GC.Collect();
+                anotherOne:
+                try
+                { serv.ReceiveFrom(player1Data, ref EndPoint1); }
+                catch { goto anotherOne;}
+                if (((IPEndPoint)EndPoint1).ToString() == new IPEndPoint(ls[0].Ip, ls[0].port).ToString())
+                    break;
+            }
+            forThread = true;
+            serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока закончено"), EndPoint2);
+
+            while (true)
+            {
                 if (serv.ReceiveFrom(data,ref EndPoint1) > 0) {
                     dataForClient = Encoding.UTF8.GetBytes("52");
                     IPEndPoint IPINFO = (IPEndPoint)EndPoint1;
@@ -332,6 +323,7 @@ namespace SimpleGame
             EndPoint EndPoint = new IPEndPoint(IP, port);
             byte[] data;
             byte[] servData = new byte[1000];
+            byte[] correctedSD = new byte[0];
             while (true)
             {
                 
@@ -341,10 +333,25 @@ namespace SimpleGame
                 {
                     s.ReceiveFrom(servData, ref EndPoint);
                     Console.WriteLine(Encoding.UTF8.GetString(servData));
+                    break;
+                }
+            }
+            while (true)
+            {
+                if (s.Available != 0)
+                {
+                    s.ReceiveFrom(servData, ref EndPoint);
+                    int i = 0;
+                    for (i = 0; i < servData.Length; i++)
+                        if (servData[i] == 0 && servData[i + 1] == 0 && servData[i + 2] == 0 && servData[i + 3] == 0)
+                            break;
+                    
+                    Array.Resize(ref correctedSD, i);
+                    Console.WriteLine(Encoding.UTF8.GetString(correctedSD));
                 }
             }
 
-        }
+            }
     }
 }
 
