@@ -328,7 +328,7 @@ namespace SimpleGame
             byte[] data = new byte[1];
             byte[] playerData = new byte[19];
             byte[] servData = new byte[1000];
-            byte[] correctedSD = new byte[0];
+            byte[] correctedSD = new byte[0];//zalupa
             s.SendTo(data, EndPoint);
             goto test;
             while (true)
