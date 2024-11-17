@@ -233,14 +233,18 @@ namespace SimpleGame
             game.FirstPlayer.CurrentHP = game.FirstPlayer.MaxHP = 20;
             game.FirstPlayer.DamagePower = (byte)random.Next(3, 6);
             game.FirstPlayer.HealPower = (byte)random.Next(1, 4);
-            byte[] newPlayer;
+            byte[] newPlayer = new byte[20];
             newPlayer = Encoding.UTF8.GetBytes(game.FirstPlayer.Name);
-            byte size = (byte)newPlayer.Length;
-            Array.Resize(ref newPlayer, size+3);
-            newPlayer[size] = game.FirstPlayer.CurrentHP;
-            newPlayer[size+1] = game.FirstPlayer.DamagePower;
-            newPlayer[size+2] = game.FirstPlayer.HealPower;
-            return newPlayer;
+            newPlayer[16] = game.FirstPlayer.MaxHP;
+            newPlayer[17] = game.FirstPlayer.CurrentHP;
+            newPlayer[18] = game.FirstPlayer.DamagePower;
+            newPlayer[19] = game.FirstPlayer.HealPower;
+            //byte size = (byte)newPlayer.Length;
+            //Array.Resize(ref newPlayer, size+3);
+            //newPlayer[size] = game.FirstPlayer.CurrentHP;
+            //newPlayer[size+1] = game.FirstPlayer.DamagePower;
+            //newPlayer[size+2] = game.FirstPlayer.HealPower;
+            return newPlayer; // Структура: первые 16..н байтов - ник игрока, следующий байт - хп игрока на данный момент, следующий - сила урона, следующий - сила хила
         }
         internal Character FirstPlayer { get; set; }
         internal Character SecondPlayer { get; set; }
@@ -284,9 +288,9 @@ namespace SimpleGame
             EndPoint1 = new IPEndPoint(ls[0].Ip, ls[0].port);
             EndPoint2 = new IPEndPoint(ls[1].Ip, ls[1].port);
            
-            Console.WriteLine($"{((IPEndPoint)EndPoint2)} { new IPEndPoint(ls[0].Ip, ls[0].port).ToString()}");
+            Console.WriteLine($"test123456{((IPEndPoint)EndPoint1)} {((IPEndPoint)EndPoint2)}");
             bool forThread = false;
-            Thread tread = new Thread(x=>{ while (true) { serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока"), EndPoint2); Thread.Sleep(1500); if (forThread) break; }});
+            Thread tread = new Thread(()=>{ while (true) { serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока"), EndPoint2); Thread.Sleep(1500); if (forThread) break; }});
             tread.Start();
             while (true)
             {
@@ -321,9 +325,12 @@ namespace SimpleGame
             Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //s.Connect(IP, port);
             EndPoint EndPoint = new IPEndPoint(IP, port);
-            byte[] data;
+            byte[] data = new byte[1];
+            byte[] playerData = new byte[19];
             byte[] servData = new byte[1000];
             byte[] correctedSD = new byte[0];
+            s.SendTo(data, EndPoint);
+            goto test;
             while (true)
             {
                 
@@ -331,23 +338,22 @@ namespace SimpleGame
                 s.SendTo(data, EndPoint);
                 if (s.Available != 0)
                 {
-                    s.ReceiveFrom(servData, ref EndPoint);
-                    Console.WriteLine(Encoding.UTF8.GetString(servData));
                     break;
                 }
             }
+            test:
+            s.ReceiveFrom(servData, ref EndPoint);
+            bool firstOrNot = false;
+            if (servData[0] == 1) firstOrNot = true;
             while (true)
             {
                 if (s.Available != 0)
                 {
-                    s.ReceiveFrom(servData, ref EndPoint);
-                    int i = 0;
-                    for (i = 0; i < servData.Length; i++)
-                        if (servData[i] == 0 && servData[i + 1] == 0 && servData[i + 2] == 0 && servData[i + 3] == 0)
-                            break;
+                    Array.Resize(ref servData, s.Available);
+                    int recvsize = s.ReceiveFrom(servData, ref EndPoint);
                     
-                    Array.Resize(ref correctedSD, i);
-                    Console.WriteLine(Encoding.UTF8.GetString(correctedSD));
+
+                    Console.WriteLine(Encoding.UTF8.GetString(servData));
                 }
             }
 
