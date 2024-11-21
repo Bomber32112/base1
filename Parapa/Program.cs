@@ -222,19 +222,21 @@ namespace SimpleGame
                 goto start;
             }
         }
-        public byte[] CreatePlayesrs() 
+        public byte[] CreatePlayers() 
         {
             Random random = new Random();
             Game game = new Game();
+            game.FirstPlayer = new Character();
             backToNick:
             Console.WriteLine("Введите ник игрока не больше 16-ти символов: ");
-            game.FirstPlayer.Name = Console.ReadLine();
+            string nickname = Console.ReadLine();
+            game.FirstPlayer.Name = nickname; if (game.FirstPlayer.Name == null) game.FirstPlayer.Name = "Dave";
             if (game.FirstPlayer.Name.Length > 16) goto backToNick;
             game.FirstPlayer.CurrentHP = game.FirstPlayer.MaxHP = 20;
             game.FirstPlayer.DamagePower = (byte)random.Next(3, 6);
             game.FirstPlayer.HealPower = (byte)random.Next(1, 4);
-            byte[] newPlayer = new byte[20];
-            newPlayer = Encoding.UTF8.GetBytes(game.FirstPlayer.Name);
+            byte[] newPlayer = Encoding.UTF8.GetBytes(game.FirstPlayer.Name);
+            Array.Resize(ref newPlayer, 20);
             newPlayer[16] = game.FirstPlayer.MaxHP;
             newPlayer[17] = game.FirstPlayer.CurrentHP;
             newPlayer[18] = game.FirstPlayer.DamagePower;
@@ -265,7 +267,7 @@ namespace SimpleGame
             serv.Bind(EndPoint1);
             byte[] dataForClient = new byte[1000];
             byte[] data = new byte[1000];
-            byte[] player1Data = new byte[19];
+            byte[] player1Data = new byte[20];
             byte[] player2Data = new byte[19];
 
             List<(IPAddress Ip, int port)> ls = new List<(IPAddress Ip, int port)>(2);
@@ -292,6 +294,8 @@ namespace SimpleGame
             bool forThread = false;
             Thread tread = new Thread(()=>{ while (true) { serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока"), EndPoint2); Thread.Sleep(1500); if (forThread) break; }});
             tread.Start();
+            serv.SendTo(new byte[] {1}, EndPoint1);
+            serv.SendTo(new byte[] { 0 }, EndPoint2);
             while (true)
             {
                 anotherOne:
@@ -303,7 +307,15 @@ namespace SimpleGame
             }
             forThread = true;
             serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока закончено"), EndPoint2);
-
+            while (true)
+            {
+            anotherOne1:
+                try
+                { serv.ReceiveFrom(player1Data, ref EndPoint1); }
+                catch { goto anotherOne1; }
+                if (((IPEndPoint)EndPoint1).ToString() == new IPEndPoint(ls[1].Ip, ls[1].port).ToString())
+                    break;
+            }
             while (true)
             {
                 if (serv.ReceiveFrom(data,ref EndPoint1) > 0) {
@@ -342,18 +354,28 @@ namespace SimpleGame
                 }
             }
             test:
-            s.ReceiveFrom(servData, ref EndPoint);
+            while (true)
+            { s.ReceiveFrom(servData, ref EndPoint);
+                if (servData[0] == 1 || servData[0] == 0) break;
+            } 
             bool firstOrNot = false;
+            Game game = new Game();
+            playerData = game.CreatePlayers();
             if (servData[0] == 1) firstOrNot = true;
+            if (firstOrNot)
+                //while (true)
+                s.SendTo(playerData, EndPoint);
             while (true)
             {
                 if (s.Available != 0)
                 {
                     Array.Resize(ref servData, s.Available);
                     int recvsize = s.ReceiveFrom(servData, ref EndPoint);
-                    
 
-                    Console.WriteLine(Encoding.UTF8.GetString(servData));
+                    string strServData = Encoding.UTF8.GetString(servData);
+                    Console.WriteLine(strServData);
+                    if (strServData == "Ожидание первого игрока закончено")
+                    { s.SendTo(playerData, EndPoint); Console.WriteLine("Подготовка завершена"); }
                 }
             }
 
