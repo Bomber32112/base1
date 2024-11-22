@@ -10,6 +10,7 @@ using System.Threading.Tasks.Dataflow;
 using System.ComponentModel.Design;
 using System.Text.Json.Nodes;
 using System.Security.Cryptography.X509Certificates;
+using System.Runtime.ExceptionServices;
 
 namespace Parapa
 {
@@ -172,7 +173,7 @@ namespace Testing
             Student student2 = Student("Гордон", "Фримен", "Фрименович", DateTime.Now, Group(123, Spec("Атомная инжинерия")));
 
         }
-            */
+            */ 
     }
         public enum Commands 
         {
@@ -189,9 +190,9 @@ namespace SimpleGame
 {
     internal class Character
     {
-        public void Info()
+        public string Info()
         {
-            Console.WriteLine($"Имя: {Name}\n Текущее здоровье:{CurrentHP}\n Текущая сила лечения:{HealPower}\n Текущая сила урона:{DamagePower}");
+            return $"Имя: {Name}\n Текущее здоровье:{CurrentHP}\n Текущая сила лечения:{HealPower}\n Текущая сила урона:{DamagePower}";
         }
         internal string Name { get; set; }
         internal byte MaxHP { get; set; }
@@ -246,7 +247,7 @@ namespace SimpleGame
             //newPlayer[size] = game.FirstPlayer.CurrentHP;
             //newPlayer[size+1] = game.FirstPlayer.DamagePower;
             //newPlayer[size+2] = game.FirstPlayer.HealPower;
-            return newPlayer; // Структура: первые 16..н байтов - ник игрока, следующий байт - хп игрока на данный момент, следующий - сила урона, следующий - сила хила
+            return newPlayer; // Структура: первые 16..н байтов - ник игрока, следующий байт - максимальное хп игрока, потом хп игрока на данный момент, следующий - сила урона, следующий - сила хила
         }
         internal Character FirstPlayer { get; set; }
         internal Character SecondPlayer { get; set; }
@@ -268,7 +269,7 @@ namespace SimpleGame
             byte[] dataForClient = new byte[1000];
             byte[] data = new byte[1000];
             byte[] player1Data = new byte[20];
-            byte[] player2Data = new byte[19];
+            byte[] player2Data = new byte[20];
 
             List<(IPAddress Ip, int port)> ls = new List<(IPAddress Ip, int port)>(2);
 
@@ -306,26 +307,51 @@ namespace SimpleGame
                     break;
             }
             forThread = true;
+            bool forThread2 = false;
             serv.SendTo(Encoding.UTF8.GetBytes("Ожидание первого игрока закончено"), EndPoint2);
+            tread = new Thread(() => { while (true) { serv.SendTo(Encoding.UTF8.GetBytes("Ожидание второго игрока"), EndPoint1); Thread.Sleep(1500); if (forThread2) break; } });
             while (true)
             {
-            anotherOne1:
+            anotherOne:
                 try
-                { serv.ReceiveFrom(player1Data, ref EndPoint1); }
-                catch { goto anotherOne1; }
-                if (((IPEndPoint)EndPoint1).ToString() == new IPEndPoint(ls[1].Ip, ls[1].port).ToString())
-                    break;
+                { serv.ReceiveFrom(player2Data, ref EndPoint2); }
+                catch { goto anotherOne; }
+                if (((IPEndPoint)EndPoint2).ToString() == new IPEndPoint(ls[1].Ip, ls[1].port).ToString())
+                    break; 
             }
-            while (true)
+            forThread2 = true;
+            serv.SendTo(Encoding.UTF8.GetBytes("Ожидание второго игрока закончено"), EndPoint2);
+            Game game = new Game();
+            game.FirstPlayer = new Character();
+            game.SecondPlayer = new Character();
+            byte[] transification = player1Data;
+            Array.Resize(ref transification, player1Data.Length - 4);
+            game.FirstPlayer.Name = Encoding.UTF8.GetString(transification);
+            game.FirstPlayer.MaxHP = player1Data[16];
+            game.FirstPlayer.CurrentHP = player1Data[17];
+            game.FirstPlayer.DamagePower = player1Data[18];
+            game.FirstPlayer.HealPower = player1Data[19];
+            transification = player2Data;
+            Array.Resize(ref transification, player2Data.Length - 4);
+            game.SecondPlayer.Name = Encoding.UTF8.GetString(transification);
+            game.SecondPlayer.MaxHP = player1Data[16];
+            game.SecondPlayer.CurrentHP = player1Data[17];
+            game.SecondPlayer.DamagePower = player1Data[18];
+            game.SecondPlayer.HealPower = player1Data[19];
+            while (true) 
             {
-                if (serv.ReceiveFrom(data,ref EndPoint1) > 0) {
-                    dataForClient = Encoding.UTF8.GetBytes("52");
-                    IPEndPoint IPINFO = (IPEndPoint)EndPoint1;
-                    serv.SendTo(dataForClient, IPINFO);
-                    Console.WriteLine($"by comp 3: {Encoding.UTF8.GetString(data)} info= {IPINFO.Address} {IPINFO.Port}"); 
-                    Array.Fill<byte>(data, 0); 
-                }
+
             }
+            //while (true)
+            //{
+            //    if (serv.ReceiveFrom(data,ref EndPoint1) > 0) { -------------------------ПОЛЕЗНО
+            //        dataForClient = Encoding.UTF8.GetBytes("52");
+            //        IPEndPoint IPINFO = (IPEndPoint)EndPoint1;
+            //        serv.SendTo(dataForClient, IPINFO);
+            //        Console.WriteLine($"by comp 3: {Encoding.UTF8.GetString(data)} info= {IPINFO.Address} {IPINFO.Port}"); 
+            //        Array.Fill<byte>(data, 0); 
+            //    }
+            //}
 
         }
 
@@ -340,7 +366,7 @@ namespace SimpleGame
             byte[] data = new byte[1];
             byte[] playerData = new byte[19];
             byte[] servData = new byte[1000];
-            byte[] correctedSD = new byte[0];//zalupa
+            byte[] correctedSD = new byte[0];//zalupa // pochemy
             s.SendTo(data, EndPoint);
             goto test;
             while (true)
@@ -363,7 +389,6 @@ namespace SimpleGame
             playerData = game.CreatePlayers();
             if (servData[0] == 1) firstOrNot = true;
             if (firstOrNot)
-                //while (true)
                 s.SendTo(playerData, EndPoint);
             while (true)
             {
@@ -375,10 +400,24 @@ namespace SimpleGame
                     string strServData = Encoding.UTF8.GetString(servData);
                     Console.WriteLine(strServData);
                     if (strServData == "Ожидание первого игрока закончено")
-                    { s.SendTo(playerData, EndPoint); Console.WriteLine("Подготовка завершена"); }
+                    {
+                      s.SendTo(playerData, EndPoint); Console.WriteLine("Подготовка завершена"); break;
+                    }
                 }
             }
-
+            while (true) 
+            {
+                if (s.Available != 0) 
+                {
+                    s.ReceiveFrom(servData, ref EndPoint);
+                    Array.Resize(ref servData, s.Available);
+                    Console.WriteLine(Encoding.UTF8.GetString(servData));
+                TryAction:
+                    if(!byte.TryParse(Console.ReadLine(), out byte x))
+                        goto TryAction;
+                    s.SendTo(new byte[] {x}, EndPoint);
+                }
+            }
             }
     }
 }
